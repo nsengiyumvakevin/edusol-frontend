@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import axios from 'axios';
+import { api, assetUrl, socketUrl } from '../api';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FiX, FiCalendar, FiBook, FiCheckCircle, FiDownload, FiShare2, FiLayers, FiSearch, FiUser } from 'react-icons/fi';
 import io from 'socket.io-client';
@@ -46,7 +46,7 @@ const SubjectModal = ({ subject, isOpen, onClose, onDownload, onShare }) => {
                             <div className="flex items-center gap-4 pb-6 border-b border-gray-200 dark:border-gray-700">
                                 {subject.teacher.profilePicture ? (
                                     <img
-                                        src={`http://localhost:5000${subject.teacher.profilePicture}`}
+                                        src={assetUrl(subject.teacher.profilePicture)}
                                         alt={subject.teacher.name}
                                         className="w-16 h-16 rounded-full object-cover"
                                     />
@@ -94,7 +94,7 @@ const SubjectModal = ({ subject, isOpen, onClose, onDownload, onShare }) => {
                             <div className="flex flex-col sm:flex-row gap-3">
                                 {subject.pdfUrl && (
                                     <a
-                                        href={`http://localhost:5000${subject.pdfUrl}`}
+                                        href={assetUrl(subject.pdfUrl)}
                                         target="_blank"
                                         rel="noreferrer"
                                         onClick={() => onDownload(subject._id)}
@@ -137,11 +137,9 @@ const ShareModal = ({ subject, isOpen, onClose }) => {
         setLoading(true);
         setSearchTerm('');
 
-        socketRef.current = io('http://localhost:5000', { transports: ['websocket'] });
+        socketRef.current = io(socketUrl, { transports: ['websocket'] });
 
-        axios.get('http://localhost:5000/api/messages/students', {
-            headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-        })
+        api.get('/messages/students')
             .then((res) => setStudents(Array.isArray(res.data) ? res.data : (res.data.data || [])))
             .catch(() => toast.error('Failed to load students'))
             .finally(() => setLoading(false));
@@ -153,11 +151,7 @@ const ShareModal = ({ subject, isOpen, onClose }) => {
         if (!subject) return;
         setSharing(true);
         try {
-            await axios.post(
-                `http://localhost:5000/api/subjects/${subject._id}/share`,
-                { studentId: student._id },
-                { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
-            );
+            await api.post(`/subjects/${subject._id}/share`, { studentId: student._id });
             socketRef.current?.emit('subject-shared', {
                 studentId: student._id,
                 subjectId: subject._id,
@@ -232,7 +226,7 @@ const ShareModal = ({ subject, isOpen, onClose }) => {
                                         >
                                             {student.profilePicture ? (
                                                 <img
-                                                    src={`http://localhost:5000${student.profilePicture}`}
+                                                    src={assetUrl(student.profilePicture)}
                                                     alt={student.name}
                                                     className="w-10 h-10 rounded-full object-cover"
                                                 />
@@ -276,7 +270,7 @@ const Subjects = () => {
     useEffect(() => {
         if (!user) return;
 
-        socketRef.current = io('http://localhost:5000', {
+        socketRef.current = io(socketUrl, {
             transports: ['websocket']
         });
 
@@ -304,11 +298,7 @@ const Subjects = () => {
 
     async function fetchSubjects() {
         try {
-            const response = await axios.get('http://localhost:5000/api/subjects', {
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
-                }
-            });
+            const response = await api.get('/subjects');
             setSubjects(response.data);
         } catch (error) {
             console.error('Error fetching subjects:', error);
@@ -323,16 +313,7 @@ const Subjects = () => {
         if (subject.hasRead) return;
 
         try {
-            const token = localStorage.getItem('token');
-            await axios.post(
-                `http://localhost:5000/api/subjects/${subject._id}/read`,
-                {},
-                {
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
-                }
-            );
+            await api.post(`/subjects/${subject._id}/read`);
             socketRef.current?.emit('subject-read', {
                 teacherId: subject.teacher._id,
                 subjectId: subject._id,
@@ -348,11 +329,7 @@ const Subjects = () => {
 
     const handleDownload = async (subjectId) => {
         try {
-            await axios.post(`http://localhost:5000/api/subjects/${subjectId}/download`, {}, {
-                headers: {
-                    Authorization: `Bearer ${localStorage.getItem('token')}`
-                }
-            });
+            await api.post(`/subjects/${subjectId}/download`);
             toast.success('Download started');
         } catch (error) {
             console.error('Error recording download:', error);
@@ -499,7 +476,7 @@ const Subjects = () => {
                                         <div className="flex items-center gap-3">
                                             {subject.teacher.profilePicture ? (
                                                 <img
-                                                    src={`http://localhost:5000${subject.teacher.profilePicture}`}
+                                                    src={assetUrl(subject.teacher.profilePicture)}
                                                     alt={subject.teacher.name}
                                                     className="w-10 h-10 rounded-full object-cover border-2 border-blue-600"
                                                 />

@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import axios from 'axios';
+import { api, assetUrl, socketUrl } from '../api';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FiBookOpen, FiUpload, FiCheckCircle, FiFileText, FiAward, FiX, FiSend } from 'react-icons/fi';
 import io from 'socket.io-client';
@@ -32,7 +32,7 @@ const Assessments = () => {
 
     useEffect(() => {
         if (!user) return;
-        socketRef.current = io('http://localhost:5000', { transports: ['websocket'] });
+        socketRef.current = io(socketUrl, { transports: ['websocket'] });
         socketRef.current.on('connect', () => {
             socketRef.current.emit('user-connected', { userId: user.id || user._id, role: user.role, name: user.name });
         });
@@ -49,9 +49,7 @@ const Assessments = () => {
 
     const fetchAssessments = async () => {
         try {
-            const response = await axios.get('http://localhost:5000/api/assessments', {
-                headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-            });
+            const response = await api.get('/assessments');
             setAssessments(response.data);
         } catch (error) {
             console.error(error);
@@ -67,9 +65,8 @@ const Assessments = () => {
             const formData = new FormData();
             formData.append('content', submissionContent);
             if (submissionFile) formData.append('submissionFile', submissionFile);
-            await axios.post(`http://localhost:5000/api/assessments/${assessmentId}/submit`, formData, {
+            await api.post(`/assessments/${assessmentId}/submit`, formData, {
                 headers: {
-                    Authorization: `Bearer ${localStorage.getItem('token')}`,
                     'Content-Type': 'multipart/form-data'
                 }
             });
@@ -162,7 +159,7 @@ const Assessments = () => {
                                             {user?.role === 'student' && !readMap[assessment._id] ? (
                                                 <button onClick={async () => {
                                                     try {
-                                                        await axios.post(`http://localhost:5000/api/assessments/${assessment._id}/read`, {}, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
+                                                        await api.post(`/assessments/${assessment._id}/read`);
                                                         const next = { ...readMap, [assessment._id]: true };
                                                         setReadMap(next);
                                                         localStorage.setItem('readAssessments', JSON.stringify(next));
@@ -171,7 +168,7 @@ const Assessments = () => {
                                                     }
                                                 }} className="text-sm text-yellow-600 dark:text-yellow-300 underline">I have read this assessment</button>
                                             ) : (
-                                                <a href={`http://localhost:5000${assessment.guideFileUrl}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400 mb-4"><FiFileText /> View marking guide</a>
+                                                <a href={assetUrl(assessment.guideFileUrl)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400 mb-4"><FiFileText /> View marking guide</a>
                                             )}
                                         </>
                                     )}

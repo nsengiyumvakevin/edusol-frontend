@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import { api } from '../api';
 import { motion } from 'framer-motion';
 import { FiToggleLeft, FiToggleRight, FiBell, FiLock, FiGlobe, FiTrash2 } from 'react-icons/fi';
 import { useAuth } from '../context/AuthContext';
@@ -59,16 +59,13 @@ const Settings = () => {
         }
 
         try {
-            await axios.put(
-                `http://localhost:5000/api/users/${user.id || user._id}`,
+            await api.put(
+                `/users/${user.id || user._id}`,
                 {
                     currentPassword,
                     password: newPassword
                 },
                 {
-                    headers: {
-                        Authorization: `Bearer ${localStorage.getItem('token')}`
-                    }
                 }
             );
             showSnackbar('Password changed successfully!', 'success');
@@ -84,14 +81,7 @@ const Settings = () => {
         if (window.confirm('Are you sure you want to delete your account? This action cannot be undone.')) {
             setLoading(true);
             try {
-                await axios.delete(
-                    `http://localhost:5000/api/users/${user.id || user._id}`,
-                    {
-                        headers: {
-                            Authorization: `Bearer ${localStorage.getItem('token')}`
-                        }
-                    }
-                );
+                await api.delete(`/users/${user.id || user._id}`);
                 showSnackbar('Account deleted successfully', 'success');
                 logout();
                 navigate('/home');

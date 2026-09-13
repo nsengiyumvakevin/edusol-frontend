@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { useSnackbar } from '../context/SnackbarContext';
 import { useLanguage } from '../context/LanguageContext';
 import LoadingSpinner from '../components/LoadingSpinner';
+import { assetUrl } from '../api';
 
 const Profile = () => {
     const { user, uploadProfilePicture, updateProfile } = useAuth();
@@ -130,7 +131,7 @@ const Profile = () => {
                                     />
                                 ) : user.profilePicture ? (
                                     <img
-                                        src={`http://localhost:5000${user.profilePicture}`}
+                                        src={assetUrl(user.profilePicture)}
                                         alt={user.name}
                                         className="w-32 h-32 rounded-full object-cover border-4 border-blue-600"
                                     />

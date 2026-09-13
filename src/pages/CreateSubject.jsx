@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import { api, socketUrl } from '../api';
 import io from 'socket.io-client';
 import toast from 'react-hot-toast';
 import { motion } from 'framer-motion';
@@ -24,7 +24,7 @@ const CreateSubject = () => {
     useEffect(() => {
         if (!user) return;
 
-        socketRef.current = io('http://localhost:5000', {
+        socketRef.current = io(socketUrl, {
             transports: ['websocket']
         });
 
@@ -46,7 +46,6 @@ const CreateSubject = () => {
         setLoading(true);
 
         try {
-            const token = localStorage.getItem('token');
             let response;
 
             if (usePdf) {
@@ -61,20 +60,18 @@ const CreateSubject = () => {
                 formData.append('fieldCategory', fieldCategory);
                 formData.append('pdfFile', pdfFile);
 
-                response = await axios.post('http://localhost:5000/api/subjects', formData, {
+                response = await api.post('/subjects', formData, {
                     headers: {
                         'Content-Type': 'multipart/form-data',
-                        Authorization: `Bearer ${token}`
                     }
                 });
             } else {
-                response = await axios.post('http://localhost:5000/api/subjects', {
+                response = await api.post('/subjects', {
                     title,
                     description,
                     fieldCategory
                 }, {
                     headers: {
-                        Authorization: `Bearer ${token}`
                     }
                 });
             }

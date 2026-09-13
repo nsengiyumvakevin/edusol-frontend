@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import axios from 'axios';
+import { api } from '../api';
 import { motion } from 'framer-motion';
 import { FiMail, FiPhone, FiMapPin, FiSend } from 'react-icons/fi';
 import { useSnackbar } from '../context/SnackbarContext';
@@ -50,7 +50,7 @@ const Contact = () => {
         setLoading(true);
 
         try {
-            await axios.post('http://localhost:5000/api/contact', formData);
+            await api.post('/contact', formData);
             showSnackbar(t('Thank you! Your message was received.'), 'success');
             setFormData({ name: '', email: '', subject: '', message: '' });
         } catch (error) {

@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import axios from 'axios';
+import { api, assetUrl, socketUrl } from '../api';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FiPlus, FiFileText, FiCheckCircle, FiAward, FiX, FiSend, FiUsers, FiTool, FiLayers } from 'react-icons/fi';
 import io from 'socket.io-client';
@@ -32,7 +32,7 @@ const TeacherAssessments = () => {
 
     useEffect(() => {
         if (!user) return;
-        socketRef.current = io('http://localhost:5000', { transports: ['websocket'] });
+        socketRef.current = io(socketUrl, { transports: ['websocket'] });
         socketRef.current.on('connect', () => {
             socketRef.current.emit('user-connected', { userId: user.id || user._id, role: user.role, name: user.name });
         });
@@ -45,9 +45,7 @@ const TeacherAssessments = () => {
 
     const fetchAssessments = async () => {
         try {
-            const response = await axios.get('http://localhost:5000/api/assessments/my-assessments', {
-                headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-            });
+            const response = await api.get('/assessments/my-assessments');
             setAssessments(response.data);
         } catch (error) {
             console.error(error);
@@ -89,9 +87,8 @@ const TeacherAssessments = () => {
             formData.append('fieldCategory', fieldCategory);
             if (guideText) formData.append('markingGuide', guideText);
             if (guideFile) formData.append('guideFile', guideFile);
-            const response = await axios.post('http://localhost:5000/api/assessments', formData, {
+            const response = await api.post('/assessments', formData, {
                 headers: {
-                    Authorization: `Bearer ${localStorage.getItem('token')}`,
                     'Content-Type': 'multipart/form-data'
                 }
             });
@@ -125,11 +122,9 @@ const TeacherAssessments = () => {
             return;
         }
         try {
-            await axios.put(`http://localhost:5000/api/assessments/${assessmentId}/submissions/${submissionId}/mark`, {
+            await api.put(`/assessments/${assessmentId}/submissions/${submissionId}/mark`, {
                 marks: Number(mark),
                 feedback
-            }, {
-                headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
             });
             const assessment = assessments.find(a => a._id === assessmentId);
             socketRef.current?.emit('assessment-marked', {
@@ -217,7 +212,7 @@ const TeacherAssessments = () => {
                                                     )}
                                                 </div>
                                                 <p className="mt-2 text-sm text-gray-600 dark:text-gray-300 whitespace-pre-wrap">{submission.content}</p>
-                                                {submission.fileUrl && <a href={`http://localhost:5000${submission.fileUrl}`} target="_blank" rel="noreferrer" className="mt-2 inline-flex items-center gap-2 text-sm text-blue-600"><FiFileText /> View attachment</a>}
+                                                {submission.fileUrl && <a href={assetUrl(submission.fileUrl)} target="_blank" rel="noreferrer" className="mt-2 inline-flex items-center gap-2 text-sm text-blue-600"><FiFileText /> View attachment</a>}
                                                 <button
                                                     onClick={() => setSelectedAssessment({ assessmentId: assessment._id, submissionId: submission._id, student: submission.student })}
                                                     className="mt-3 rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 px-3 py-2 text-sm text-white font-semibold"

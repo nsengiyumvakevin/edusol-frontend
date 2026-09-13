@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import { api, assetUrl } from '../api';
 import toast from 'react-hot-toast';
 import { useLanguage } from '../context/LanguageContext';
 
@@ -23,7 +23,7 @@ const UserTable = ({ users, title, onEdit, onDelete }) => (
                                 <div className="flex items-center">
                                     {user.profilePicture ? (
                                         <img
-                                            src={`http://localhost:5000${user.profilePicture}`}
+                                            src={assetUrl(user.profilePicture)}
                                             alt={user.name}
                                             className="w-8 h-8 rounded-full object-cover mr-2"
                                         />
@@ -76,8 +76,8 @@ const AdminPanel = () => {
     async function fetchUsers() {
         try {
             const [teachersRes, studentsRes] = await Promise.all([
-                axios.get('http://localhost:5000/api/users?role=teacher'),
-                axios.get('http://localhost:5000/api/users?role=student')
+                api.get('/users?role=teacher'),
+                api.get('/users?role=student')
             ]);
             setTeachers(teachersRes.data);
             setStudents(studentsRes.data);
@@ -95,7 +95,7 @@ const AdminPanel = () => {
     const handleCreateUser = async (e) => {
         e.preventDefault();
         try {
-            await axios.post('http://localhost:5000/api/users', createForm);
+            await api.post('/users', createForm);
             toast.success('User created successfully');
             setShowCreateModal(false);
             setCreateForm({ name: '', email: '', password: '', role: 'student' });
@@ -108,7 +108,7 @@ const AdminPanel = () => {
     const handleDelete = async (id) => {
         if (window.confirm('Are you sure you want to delete this user?')) {
             try {
-                await axios.delete(`http://localhost:5000/api/users/${id}`);
+                await api.delete(`/users/${id}`);
                 toast.success('User deleted successfully');
                 fetchUsers();
             } catch {
@@ -129,7 +129,7 @@ const AdminPanel = () => {
     const handleUpdate = async (e) => {
         e.preventDefault();
         try {
-            await axios.put(`http://localhost:5000/api/users/${editingUser._id}`, editForm);
+            await api.put(`/users/${editingUser._id}`, editForm);
             toast.success('User updated successfully');
             setEditingUser(null);
             fetchUsers();

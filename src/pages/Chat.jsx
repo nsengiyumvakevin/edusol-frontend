@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import axios from 'axios';
+import { api, assetUrl, socketUrl } from '../api';
 import { useAuth } from '../context/AuthContext';
 import io from 'socket.io-client';
 import toast from 'react-hot-toast';
@@ -35,7 +35,7 @@ const Chat = () => {
     useEffect(() => {
         if (!user) return;
         
-        socket.current = io('http://localhost:5000', {
+        socket.current = io(socketUrl, {
             transports: ['websocket']
         });
         
@@ -97,14 +97,14 @@ const Chat = () => {
                 setLoading(true);
                 let endpoint;
                 if (user?.role === 'teacher') {
-                    endpoint = 'http://localhost:5000/api/messages/students';
+                    endpoint = '/messages/students';
                 } else if (user?.role === 'student') {
-                    endpoint = 'http://localhost:5000/api/messages/teachers';
+                    endpoint = '/messages/teachers';
                 } else {
                     return;
                 }
 
-                const response = await axios.get(endpoint);
+                const response = await api.get(endpoint);
                 let usersData = response.data;
                 if (usersData.data) {
                     usersData = usersData.data;
@@ -140,8 +140,7 @@ const Chat = () => {
         async function loadMessages() {
             try {
                 setMessagesLoading(true);
-                const url = `http://localhost:5000/api/messages/conversation/${selectedUser._id}`;
-                const response = await axios.get(url);
+                const response = await api.get(`/messages/conversation/${selectedUser._id}`);
                 let messagesData = response.data;
                 if (messagesData.data) {
                     messagesData = messagesData.data;
@@ -165,7 +164,7 @@ const Chat = () => {
 
         async function markConversationRead(otherUserId) {
             try {
-                await axios.put(`http://localhost:5000/api/messages/conversation/${otherUserId}/read`);
+                await api.put(`/messages/conversation/${otherUserId}/read`);
                 const currentUser = userRef.current;
                 socket.current?.emit('conversation-read', {
                     otherUserId,
@@ -290,7 +289,7 @@ const Chat = () => {
                                     <div className="flex items-center flex-1">
                                         {u.profilePicture ? (
                                             <img
-                                                src={`http://localhost:5000${u.profilePicture}`}
+                                                src={assetUrl(u.profilePicture)}
                                                 alt={u.name}
                                                 className="w-10 h-10 rounded-full object-cover mr-3"
                                             />
@@ -326,7 +325,7 @@ const Chat = () => {
                                     <div className="flex items-center">
                                         {selectedUser.profilePicture ? (
                                             <img
-                                                src={`http://localhost:5000${selectedUser.profilePicture}`}
+                                                src={assetUrl(selectedUser.profilePicture)}
                                                 alt={selectedUser.name}
                                                 className="w-10 h-10 rounded-full object-cover mr-3"
                                             />

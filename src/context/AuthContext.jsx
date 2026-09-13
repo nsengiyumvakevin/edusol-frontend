@@ -1,6 +1,6 @@
 /* eslint-disable react-refresh/only-export-components */
 import React, { createContext, useState, useContext, useEffect } from 'react';
-import axios from 'axios';
+import { api } from '../api';
 import toast from 'react-hot-toast';
 
 const AuthContext = createContext();
@@ -18,16 +18,11 @@ export const AuthProvider = ({ children }) => {
     const [token, setToken] = useState(() => localStorage.getItem('token'));
 
     useEffect(() => {
-        if (token) {
-            axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-        } else {
-            delete axios.defaults.headers.common['Authorization'];
-        }
     }, [token]);
 
     const login = async (email, password) => {
         try {
-            const response = await axios.post('http://localhost:5000/api/auth/login', {
+            const response = await api.post('/auth/login', {
                 email,
                 password
             });
@@ -37,7 +32,6 @@ export const AuthProvider = ({ children }) => {
             localStorage.setItem('user', JSON.stringify(user));
             setToken(token);
             setUser(user);
-            axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
             toast.success('Login successful!');
             return { success: true };
         } catch (error) {
@@ -48,7 +42,7 @@ export const AuthProvider = ({ children }) => {
 
     const register = async (name, email, password, role, nationality, fieldInterest) => {
         try {
-            const response = await axios.post('http://localhost:5000/api/auth/register', {
+            const response = await api.post('/auth/register', {
                 name,
                 email,
                 password,
@@ -62,7 +56,6 @@ export const AuthProvider = ({ children }) => {
             localStorage.setItem('user', JSON.stringify(user));
             setToken(token);
             setUser(user);
-            axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
             toast.success('Registration successful!');
             return { success: true };
         } catch (error) {
@@ -76,7 +69,6 @@ export const AuthProvider = ({ children }) => {
         localStorage.removeItem('user');
         setToken(null);
         setUser(null);
-        delete axios.defaults.headers.common['Authorization'];
         toast.success('Logged out successfully');
     };
 
@@ -85,7 +77,7 @@ export const AuthProvider = ({ children }) => {
         formData.append('profilePicture', file);
         
         try {
-            const response = await axios.post('http://localhost:5000/api/users/profile-picture', formData, {
+            const response = await api.post('/users/profile-picture', formData, {
                 headers: {
                     'Content-Type': 'multipart/form-data'
                 }
@@ -110,7 +102,7 @@ export const AuthProvider = ({ children }) => {
                 return { success: false, error: 'User ID not found. Please log in again.' };
             }
 
-            const response = await axios.put(`http://localhost:5000/api/users/${userId}`, updates);
+            const response = await api.put(`/users/${userId}`, updates);
 
             const updated = response.data.user || {};
             const normalizedUser = {

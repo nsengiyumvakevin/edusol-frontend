@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import { api, assetUrl } from '../api';
 import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -85,12 +85,7 @@ const MySubjects = () => {
 
     const fetchSubjects = async () => {
         try {
-            const token = localStorage.getItem('token');
-            const response = await axios.get('http://localhost:5000/api/subjects/my-subjects', {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            });
+            const response = await api.get('/subjects/my-subjects');
             setSubjects(response.data);
         } catch (error) {
             console.error('Error fetching subjects:', error);
@@ -103,12 +98,7 @@ const MySubjects = () => {
     const handleDelete = async (id) => {
         if (window.confirm('Are you sure you want to delete this subject?')) {
             try {
-                const token = localStorage.getItem('token');
-                await axios.delete(`http://localhost:5000/api/subjects/${id}`, {
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
-                });
+                await api.delete(`/subjects/${id}`);
                 toast.success(t('Subject deleted successfully'));
                 fetchSubjects();
             } catch {
@@ -138,35 +128,29 @@ const MySubjects = () => {
         setEditLoading(true);
 
         try {
-            const token = localStorage.getItem('token');
-
             if (editPdfFile) {
                 const formData = new FormData();
                 formData.append('title', editTitle);
                 formData.append('description', editDescription);
                 formData.append('pdfFile', editPdfFile);
 
-                await axios.put(
-                    `http://localhost:5000/api/subjects/${editSubject._id}`,
+                await api.put(
+                    `/subjects/${editSubject._id}`,
                     formData,
                     {
                         headers: {
                             'Content-Type': 'multipart/form-data',
-                            Authorization: `Bearer ${token}`
                         }
                     }
                 );
             } else {
-                await axios.put(
-                    `http://localhost:5000/api/subjects/${editSubject._id}`,
+                await api.put(
+                    `/subjects/${editSubject._id}`,
                     {
                         title: editTitle,
                         description: editDescription
                     },
                     {
-                        headers: {
-                            Authorization: `Bearer ${token}`
-                        }
                     }
                 );
             }
@@ -243,7 +227,7 @@ const MySubjects = () => {
                                                 <span>{subject.studentsRead?.length || 0} student(s) read</span>
                                                 {subject.pdfUrl && (
                                                     <a
-                                                        href={`http://localhost:5000${subject.pdfUrl}`}
+                                                        href={assetUrl(subject.pdfUrl)}
                                                         target="_blank"
                                                         rel="noreferrer"
                                                         className="text-blue-600 dark:text-blue-300 hover:underline"

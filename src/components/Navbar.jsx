@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { FiMenu, FiX, FiBell, FiSun, FiMoon, FiChevronDown, FiLogOut, FiUser, FiSettings } from 'react-icons/fi';
 import Tooltip from './Tooltip';
 import io from 'socket.io-client';
+import { assetUrl, socketUrl } from '../api';
 
 const Navbar = () => {
     const { user, logout } = useAuth();
@@ -24,7 +25,7 @@ const Navbar = () => {
     useEffect(() => {
         if (!user) return;
 
-        socketRef.current = io('http://localhost:5000', {
+        socketRef.current = io(socketUrl, {
             transports: ['websocket'],
             cors: {
                 origin: 'http://localhost:5173',
@@ -231,7 +232,7 @@ const Navbar = () => {
                                     >
                                         {user.profilePicture ? (
                                             <img
-                                                src={`http://localhost:5000${user.profilePicture}`}
+                                                src={assetUrl(user.profilePicture)}
                                                 alt={user.name}
                                                 className="w-8 h-8 rounded-full object-cover border-2 border-white"
                                             />
