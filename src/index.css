@@ -1,0 +1,29 @@
+@import "tailwindcss";
+
+/* Green theme overrides for a simple green appearance */
+html.green-theme body {
+	background: linear-gradient(180deg,#ecfdf5 0%, #bbf7d0 100%);
+}
+
+/* Primary buttons and accents */
+.green-theme .from-blue-600 { background-image: linear-gradient(to right, #10b981, #059669) !important; }
+.green-theme .to-indigo-600 { background-image: linear-gradient(to right, #10b981, #059669) !important; }
+.green-theme .bg-blue-600 { background-color: #10b981 !important; }
+.green-theme .text-blue-600 { color: #047857 !important; }
+.green-theme .bg-white { background-color: #f0fff4 !important; }
+.green-theme .text-gray-900 { color: #064e3b !important; }
+.green-theme .rounded-2xl { box-shadow: 0 10px 25px rgba(2,132,87,0.06); }
+
+/* Navbar/headers */
+.green-theme .bg-white\/6 { background-color: rgba(16,185,129,0.06) !important; }
+.green-theme .bg-blue-50 { background-color: #ecfdf5 !important; }
+
+/* Chat and panels */
+.green-theme .bg-gray-50 { background-color: #f0fff4 !important; }
+.green-theme .bg-gray-800 { background-color: #064e3b !important; }
+
+/* Simple link color adjustments */
+.green-theme a { color: #065f46; }
+
+/* Ensure dark variant does not conflict: if dark mode is active, keep dark styles */
+html.dark.green-theme .bg-white { background-color: #0f172a !important; }
