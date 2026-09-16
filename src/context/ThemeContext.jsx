@@ -5,23 +5,20 @@ const ThemeContext = createContext();
 
 export const ThemeProvider = ({ children }) => {
     const [theme, setTheme] = useState(() => {
-        // theme can be 'dark', 'light', or 'green'
         const saved = localStorage.getItem('theme');
-        if (saved) return saved;
-        return 'dark';
+        return saved === 'dark' || saved === 'light' ? saved : 'light';
     });
 
     useEffect(() => {
         localStorage.setItem('theme', theme);
         const html = document.documentElement;
-        // clear theme classes
         html.classList.remove('dark');
         html.classList.remove('green-theme');
         if (theme === 'dark') html.classList.add('dark');
-        if (theme === 'green') html.classList.add('green-theme');
+        html.style.colorScheme = theme;
     }, [theme]);
 
-    const set = (value) => setTheme(value);
+    const set = (value) => setTheme(value === 'dark' ? 'dark' : 'light');
 
     const toggleTheme = () => setTheme(prev => (prev === 'dark' ? 'light' : 'dark'));
 

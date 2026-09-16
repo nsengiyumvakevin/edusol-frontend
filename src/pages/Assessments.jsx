@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { api, assetUrl, socketUrl } from '../api';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiBookOpen, FiUpload, FiCheckCircle, FiFileText, FiAward, FiX, FiSend } from 'react-icons/fi';
+import { FiBookOpen, FiUpload, FiCheckCircle, FiFileText, FiAward, FiX, FiSend, FiDownload } from 'react-icons/fi';
 import io from 'socket.io-client';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
@@ -34,7 +34,12 @@ const Assessments = () => {
         if (!user) return;
         socketRef.current = io(socketUrl, { transports: ['websocket'] });
         socketRef.current.on('connect', () => {
-            socketRef.current.emit('user-connected', { userId: user.id || user._id, role: user.role, name: user.name });
+            socketRef.current.emit('user-connected', {
+                userId: user.id || user._id,
+                role: user.role,
+                name: user.name,
+                fieldInterest: user.fieldInterest
+            });
         });
         socketRef.current.on('new-assessment', (data) => {
             toast.success(`${data.teacherName} posted a new assessment: ${data.title}`);
@@ -59,17 +64,13 @@ const Assessments = () => {
     };
 
     const handleSubmit = async (assessmentId) => {
-        if (!submissionContent.trim()) return;
+        if (!submissionContent.trim() && !submissionFile) return;
         setSubmitting(true);
         try {
             const formData = new FormData();
             formData.append('content', submissionContent);
             if (submissionFile) formData.append('submissionFile', submissionFile);
-            await api.post(`/assessments/${assessmentId}/submit`, formData, {
-                headers: {
-                    'Content-Type': 'multipart/form-data'
-                }
-            });
+            await api.post(`/assessments/${assessmentId}/submit`, formData);
             const assessment = assessments.find(a => a._id === assessmentId);
             socketRef.current?.emit('assessment-submitted', {
                 teacherId: assessment?.teacher?._id,
@@ -104,14 +105,24 @@ const Assessments = () => {
                 {assessments.length === 0 && (
                     <div className="text-center py-16 bg-white dark:bg-gray-800 rounded-2xl">
                         <FiBookOpen className="mx-auto text-gray-400 dark:text-gray-600" size={48} />
-                        <p className="text-lg text-gray-600 dark:text-gray-400 mt-4">{t('No assessments posted yet.')}</p>
+                        <p className="text-lg text-gray-600 dark:text-gray-400 mt-4">
+                            {user?.role === 'student'
+                                ? t('No assessments are available in your registered field yet.')
+                                : t('No assessments posted yet.')}
+                        </p>
                     </div>
                 )}
 
                 <div className="grid gap-6 lg:grid-cols-2">
                     {assessments.map((assessment) => {
                         const existingSubmission = assessment.submissions?.find(
-                            (submission) => submission.student?.toString() === user?.id || submission.student?.toString() === user?._id
+                            (submission) => {
+                                const submissionStudentId = typeof submission.student === 'object'
+                                    ? submission.student?._id
+                                    : submission.student;
+                                const currentStudentId = user?.id || user?._id;
+                                return submissionStudentId?.toString() === currentStudentId?.toString();
+                            }
                         );
                         const marked = existingSubmission?.marks !== null && existingSubmission?.marks !== undefined;
                         return (
@@ -154,9 +165,46 @@ const Assessments = () => {
                                         </div>
                                     )}
 
-                                    {assessment.guideFileUrl && (
-                                        <>
-                                            {user?.role === 'student' && !readMap[assessment._id] ? (
+                                    {(assessment.assessmentFileUrl || assessment.guideFileUrl) && (
+                                        <div className="mb-4">
+                                            <div className="flex flex-wrap gap-3">
+                                                    {assessment.assessmentFileUrl && (
+                                                        <>
+                                                            <a href={assetUrl(assessment.assessmentFileUrl)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400"><FiFileText /> Open assessment</a>
+                                                            <a
+                                                                href={assetUrl(assessment.assessmentFileUrl)}
+                                                                target="_blank"
+                                                                rel="noreferrer"
+                                                                download
+                                                                onClick={async () => {
+                                                                    try {
+                                                                        await api.get(`/assessments/${assessment._id}/download`);
+                                                                    } catch (error) {
+                                                                        console.error('Assessment download tracking failed:', error);
+                                                                    }
+                                                                }}
+                                                                className="inline-flex items-center gap-2 text-sm text-emerald-600 dark:text-emerald-400"
+                                                            >
+                                                                <FiDownload /> Download assessment
+                                                            </a>
+                                                        </>
+                                                    )}
+                                                    {assessment.guideFileUrl && (
+                                                        <>
+                                                            <a href={assetUrl(assessment.guideFileUrl)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 text-sm text-violet-600 dark:text-violet-400"><FiFileText /> View marking guide</a>
+                                                            <a
+                                                                href={assetUrl(assessment.guideFileUrl)}
+                                                                target="_blank"
+                                                                rel="noreferrer"
+                                                                download
+                                                                className="inline-flex items-center gap-2 text-sm text-amber-600 dark:text-amber-400"
+                                                            >
+                                                                <FiDownload /> Download guide
+                                                            </a>
+                                                        </>
+                                                    )}
+                                            </div>
+                                            {user?.role === 'student' && !readMap[assessment._id] && (
                                                 <button onClick={async () => {
                                                     try {
                                                         await api.post(`/assessments/${assessment._id}/read`);
@@ -166,11 +214,9 @@ const Assessments = () => {
                                                     } catch (err) {
                                                         console.error(err);
                                                     }
-                                                }} className="text-sm text-yellow-600 dark:text-yellow-300 underline">I have read this assessment</button>
-                                            ) : (
-                                                <a href={assetUrl(assessment.guideFileUrl)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400 mb-4"><FiFileText /> View marking guide</a>
+                                                }} className="mt-2 text-sm text-yellow-600 dark:text-yellow-300 underline">Mark assessment as read before submitting</button>
                                             )}
-                                        </>
+                                        </div>
                                     )}
 
                                     <div className="flex items-center justify-between text-sm text-gray-500 dark:text-gray-400">
@@ -198,11 +244,11 @@ const Assessments = () => {
                                 <button onClick={() => setSelectedAssessment(null)} className="text-gray-500 hover:text-gray-700 dark:hover:text-white"><FiX size={24} /></button>
                             </div>
                             <p className="text-sm text-gray-600 dark:text-gray-300 mt-2 whitespace-pre-wrap">{selectedAssessment.instructions}</p>
-                            <textarea value={submissionContent} onChange={(e) => setSubmissionContent(e.target.value)} rows="8" className="mt-4 w-full rounded-xl border border-gray-300 p-3 dark:border-gray-600 dark:bg-gray-700 dark:text-white" placeholder="Type your worked assessment here..." />
-                            <input type="file" onChange={(e) => setSubmissionFile(e.target.files?.[0] || null)} className="mt-4 w-full text-sm" />
+                            <textarea value={submissionContent} onChange={(e) => setSubmissionContent(e.target.value)} rows="8" className="mt-4 w-full rounded-xl border border-gray-300 p-3 dark:border-gray-600 dark:bg-gray-700 dark:text-white" placeholder="Optional: type your worked assessment here..." />
+                            <input type="file" accept="application/pdf" onChange={(e) => setSubmissionFile(e.target.files?.[0] || null)} className="mt-4 w-full text-sm" />
                             <div className="mt-6 flex justify-end gap-3">
                                 <button onClick={() => setSelectedAssessment(null)} className="rounded-lg bg-gray-200 px-4 py-2 dark:bg-gray-600 dark:text-white">Cancel</button>
-                                <button onClick={() => handleSubmit(selectedAssessment._id)} disabled={submitting || !submissionContent.trim()} className="rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 px-4 py-2 text-white disabled:opacity-50 flex items-center gap-2">
+                                <button onClick={() => handleSubmit(selectedAssessment._id)} disabled={submitting || (!submissionContent.trim() && !submissionFile)} className="rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 px-4 py-2 text-white disabled:opacity-50 flex items-center gap-2">
                                     <FiSend size={16} /> {submitting ? 'Submitting...' : 'Submit to teacher'}
                                 </button>
                             </div>

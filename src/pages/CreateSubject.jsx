@@ -32,7 +32,8 @@ const CreateSubject = () => {
             socketRef.current.emit('user-connected', {
                 userId: user.id || user._id,
                 role: user.role,
-                name: user.name
+                name: user.name,
+                fieldInterest: user.fieldInterest
             });
         });
 
@@ -82,7 +83,8 @@ const CreateSubject = () => {
                     teacherId: user.id || user._id,
                     teacherName: user.name,
                     subjectId: newSubject._id,
-                    title: newSubject.title
+                    title: newSubject.title,
+                    fieldCategory: newSubject.fieldCategory
                 });
                 toast.success(t('Subject created successfully!'));
                 navigate('/my-subjects');

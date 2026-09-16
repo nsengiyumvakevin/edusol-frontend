@@ -9,7 +9,8 @@ import { nationalities } from '../data/nationalities';
 import { useLanguage } from '../context/LanguageContext';
 
 const Register = () => {
-    const [name, setName] = useState('');
+    const [firstName, setFirstName] = useState('');
+    const [lastName, setLastName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [role, setRole] = useState('student');
@@ -28,7 +29,7 @@ const Register = () => {
             return;
         }
         setLoading(true);
-        const result = await register(name, email, password, role, nationality, fieldInterest);
+        const result = await register(firstName, lastName, email, password, role, nationality, fieldInterest);
         setLoading(false);
         
         if (result.success) {
@@ -87,18 +88,26 @@ const Register = () => {
                         transition={{ delay: 0.5 }}
                     >
                         <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                            Full Name
+                            First Name
                         </label>
                         <div className="relative">
                             <FiUser className="absolute left-3 top-3 text-gray-400" size={20} />
                             <input
                                 type="text"
-                                value={name}
-                                onChange={(e) => setName(e.target.value)}
-                                placeholder="Your full name"
+                                value={firstName}
+                                onChange={(e) => setFirstName(e.target.value)}
+                                placeholder="Your first name"
                                 className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-600"
                                 required
                             />
+                        </div>
+                    </motion.div>
+
+                    <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.55 }}>
+                        <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Last Name</label>
+                        <div className="relative">
+                            <FiUser className="absolute left-3 top-3 text-gray-400" size={20} />
+                            <input type="text" value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder="Your last name" className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-600" required />
                         </div>
                     </motion.div>
 

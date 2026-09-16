@@ -38,6 +38,10 @@ const Profile = () => {
     const handlePhotoChange = (e) => {
         const file = e.target.files[0];
         if (file) {
+            if (!file.type.startsWith('image/')) {
+                showSnackbar(t('Please select an image file'), 'error');
+                return;
+            }
             if (file.size > 5 * 1024 * 1024) {
                 showSnackbar(t('Image size must be less than 5MB'), 'error');
                 return;

@@ -40,10 +40,11 @@ export const AuthProvider = ({ children }) => {
         }
     };
 
-    const register = async (name, email, password, role, nationality, fieldInterest) => {
+    const register = async (firstName, lastName, email, password, role, nationality, fieldInterest) => {
         try {
             const response = await api.post('/auth/register', {
-                name,
+                firstName,
+                lastName,
                 email,
                 password,
                 role,
@@ -77,19 +78,15 @@ export const AuthProvider = ({ children }) => {
         formData.append('profilePicture', file);
         
         try {
-            const response = await api.post('/users/profile-picture', formData, {
-                headers: {
-                    'Content-Type': 'multipart/form-data'
-                }
-            });
+            const response = await api.post('/users/profile-picture', formData);
             
             const updatedUser = { ...user, profilePicture: response.data.profilePicture };
             localStorage.setItem('user', JSON.stringify(updatedUser));
             setUser(updatedUser);
             toast.success('Profile picture updated!');
             return { success: true };
-        } catch {
-            toast.error('Failed to upload profile picture');
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'Failed to upload profile picture');
             return { success: false };
         }
     };
@@ -107,12 +104,15 @@ export const AuthProvider = ({ children }) => {
             const updated = response.data.user || {};
             const normalizedUser = {
                 id: updated._id || updated.id || userId,
+                firstName: updated.firstName ?? user?.firstName ?? '',
+                lastName: updated.lastName ?? user?.lastName ?? '',
                 name: updated.name ?? user?.name,
                 email: updated.email ?? user?.email,
                 role: updated.role ?? user?.role,
                 profilePicture: updated.profilePicture ?? user?.profilePicture ?? '',
                 nationality: updated.nationality ?? user?.nationality ?? '',
-                fieldInterest: updated.fieldInterest ?? user?.fieldInterest ?? ''
+                fieldInterest: updated.fieldInterest ?? user?.fieldInterest ?? '',
+                settings: updated.settings ?? user?.settings ?? {}
             };
 
             localStorage.setItem('user', JSON.stringify(normalizedUser));

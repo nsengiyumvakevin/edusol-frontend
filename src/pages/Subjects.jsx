@@ -258,10 +258,14 @@ const Subjects = () => {
     const [selectedSubject, setSelectedSubject] = useState(null);
     const [shareSubject, setShareSubject] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
-    const [selectedField, setSelectedField] = useState('all');
     const { user } = useAuth();
     const { t } = useLanguage();
     const socketRef = useRef(null);
+    const selectedField = user?.role === 'student' && user.fieldInterest
+        ? user.fieldInterest
+        : user?.role === 'student'
+            ? 'general'
+            : 'all';
 
     useEffect(() => {
         fetchSubjects();
@@ -278,7 +282,8 @@ const Subjects = () => {
             socketRef.current.emit('user-connected', {
                 userId: user.id || user._id,
                 role: user.role,
-                name: user.name
+                name: user.name,
+                fieldInterest: user.fieldInterest
             });
         });
 
@@ -338,7 +343,9 @@ const Subjects = () => {
 
     const filteredSubjects = subjects.filter(subject => {
         const matchesSearch = subject.title.toLowerCase().includes(searchTerm.toLowerCase()) || subject.description.toLowerCase().includes(searchTerm.toLowerCase());
-        const matchesField = selectedField === 'all' || subject.fieldCategory === selectedField;
+        const matchesField = selectedField === 'all'
+            ? true
+            : subject.fieldCategory === selectedField || subject.fieldCategory === 'general';
         return matchesSearch && matchesField;
     });
 
@@ -394,21 +401,15 @@ const Subjects = () => {
                                 </div>
                             </div>
                             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-                                <button
-                                    onClick={() => setSelectedField('all')}
-                                    className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all duration-200 ${
-                                        selectedField === 'all'
-                                            ? 'border-blue-600 bg-blue-50 dark:bg-blue-900/30 shadow-md'
-                                            : 'border-gray-200 dark:border-gray-700 hover:border-blue-400 hover:bg-blue-50 dark:hover:bg-gray-800'
-                                    }`}
-                                >
-                                    <span className="text-3xl">📚</span>
-                                    <span className="text-sm font-semibold text-gray-900 dark:text-white text-center">All Fields</span>
-                                </button>
+                                {user?.role !== 'student' && (
+                                    <div className="flex flex-col items-center gap-2 rounded-xl border-2 border-blue-600 bg-blue-50 p-4 shadow-md dark:bg-blue-900/30">
+                                        <span className="text-3xl">📚</span>
+                                        <span className="text-sm font-semibold text-gray-900 dark:text-white text-center">All Fields</span>
+                                    </div>
+                                )}
                                 {group.fields.map((field) => (
-                                    <button
+                                    <div
                                         key={field.value}
-                                        onClick={() => setSelectedField(field.value)}
                                         title={field.description}
                                         className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all duration-200 ${
                                             selectedField === field.value
@@ -418,7 +419,7 @@ const Subjects = () => {
                                     >
                                         <span className="text-3xl">{field.icon}</span>
                                         <span className="text-sm font-semibold text-gray-900 dark:text-white text-center leading-tight">{field.label}</span>
-                                    </button>
+                                    </div>
                                 ))}
                             </div>
                         </motion.div>
@@ -509,7 +510,11 @@ const Subjects = () => {
                     >
                         <FiBook className="mx-auto text-gray-400 dark:text-gray-600" size={48} />
                         <p className="text-lg text-gray-600 dark:text-gray-400 mt-4">
-                            {searchTerm ? 'No subjects found matching your search.' : `No subjects available in ${getFieldLabel(selectedField)} yet.`}
+                            {searchTerm
+                                ? 'No subjects found matching your search.'
+                                : user?.role === 'student'
+                                    ? `No subjects are available in your registered field yet.`
+                                    : `No subjects available in ${getFieldLabel(selectedField)} yet.`}
                         </p>
                     </motion.div>
                 )}

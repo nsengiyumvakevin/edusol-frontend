@@ -15,9 +15,10 @@ const TeacherAssessments = () => {
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
     const [instructions, setInstructions] = useState('');
-    const [fieldCategory, setFieldCategory] = useState('ict-multimedia');
+    const [fieldCategory, setFieldCategory] = useState('general');
     const [guideText, setGuideText] = useState('');
     const [guideFile, setGuideFile] = useState(null);
+    const [assessmentFile, setAssessmentFile] = useState(null);
     const [submitting, setSubmitting] = useState(false);
     const [selectedAssessment, setSelectedAssessment] = useState(null);
     const [mark, setMark] = useState('');
@@ -34,7 +35,12 @@ const TeacherAssessments = () => {
         if (!user) return;
         socketRef.current = io(socketUrl, { transports: ['websocket'] });
         socketRef.current.on('connect', () => {
-            socketRef.current.emit('user-connected', { userId: user.id || user._id, role: user.role, name: user.name });
+            socketRef.current.emit('user-connected', {
+                userId: user.id || user._id,
+                role: user.role,
+                name: user.name,
+                fieldInterest: user.fieldInterest
+            });
         });
         socketRef.current.on('new-submission', (data) => {
             toast.success(`${data.studentName} submitted "${data.title}"`);
@@ -87,27 +93,31 @@ const TeacherAssessments = () => {
             formData.append('fieldCategory', fieldCategory);
             if (guideText) formData.append('markingGuide', guideText);
             if (guideFile) formData.append('guideFile', guideFile);
-            const response = await api.post('/assessments', formData, {
-                headers: {
-                    'Content-Type': 'multipart/form-data'
-                }
-            });
+            if (assessmentFile) formData.append('assessmentFile', assessmentFile);
+            if (!assessmentFile) {
+                toast.error('Please upload the assessment PDF');
+                return;
+            }
+            const response = await api.post('/assessments', formData);
+            const createdAssessment = response.data;
             if (response?.status === 201) {
+                setAssessments((currentAssessments) => [createdAssessment, ...currentAssessments]);
                 socketRef.current?.emit('send-assessment', {
                     teacherId: user.id || user._id,
                     teacherName: user.name,
-                    assessmentId: response.data._id,
-                    title: response.data.title
+                    assessmentId: createdAssessment._id,
+                    title: createdAssessment.title,
+                    fieldCategory: createdAssessment.fieldCategory
                 });
             }
             setShowModal(false);
             setTitle('');
             setDescription('');
             setInstructions('');
-            setFieldCategory('ict-multimedia');
+            setFieldCategory('general');
             setGuideText('');
             setGuideFile(null);
-            fetchAssessments();
+            setAssessmentFile(null);
             toast.success('Assessment created successfully');
         } catch (error) {
             toast.error(error.response?.data?.message || 'Failed to create assessment');
@@ -149,7 +159,7 @@ const TeacherAssessments = () => {
     }
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-gray-50 to-indigo-50 dark:from-gray-900 dark:to-gray-800 px-4 py-8">
+        <div className="min-h-screen top-30 bg-gradient-to-br from-gray-50 to-indigo-50 dark:from-gray-900 dark:to-gray-800 px-4 py-8">
             <div className="max-w-6xl mx-auto">
                 <div className="mb-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                     <div>
@@ -176,6 +186,16 @@ const TeacherAssessments = () => {
                                         <span className="rounded-full bg-emerald-100 dark:bg-emerald-900/30 px-3 py-1 text-sm text-emerald-700 dark:text-emerald-200">{getFieldLabel(assessment.fieldCategory)}</span>
                                     </div>
                                     <p className="text-sm text-gray-600 dark:text-gray-300 mb-3">{assessment.description}</p>
+                                    {assessment.assessmentFileUrl && (
+                                        <a
+                                            href={assetUrl(assessment.assessmentFileUrl)}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            className="mb-4 inline-flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400"
+                                        >
+                                            <FiFileText /> View assessment PDF
+                                        </a>
+                                    )}
 
                                     <div className="flex flex-wrap items-center gap-4 mb-4">
                                         <span className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
@@ -198,10 +218,10 @@ const TeacherAssessments = () => {
                                     <div className="space-y-3">
                                         {assessment.submissions?.length ? assessment.submissions.map((submission) => (
                                             <div key={submission._id} className="rounded-xl border border-gray-200 bg-gray-50 p-3 dark:border-gray-600 dark:bg-gray-700">
-                                                <div className="flex items-center justify-between">
+                                                <div className="flex items-center justify-between gap-2">
                                                     <span className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2">
                                                         <FiUsers size={14} className="text-blue-600 dark:text-blue-400" />
-                                                        Student submission
+                                                        {submission.student?.name || 'Student submission'}
                                                     </span>
                                                     {submission.marks !== null && submission.marks !== undefined ? (
                                                         <span className="flex items-center gap-1 text-green-600 dark:text-green-400 text-sm font-semibold">
@@ -212,7 +232,7 @@ const TeacherAssessments = () => {
                                                     )}
                                                 </div>
                                                 <p className="mt-2 text-sm text-gray-600 dark:text-gray-300 whitespace-pre-wrap">{submission.content}</p>
-                                                {submission.fileUrl && <a href={assetUrl(submission.fileUrl)} target="_blank" rel="noreferrer" className="mt-2 inline-flex items-center gap-2 text-sm text-blue-600"><FiFileText /> View attachment</a>}
+                                                {submission.fileUrl && <a href={assetUrl(submission.fileUrl)} target="_blank" rel="noreferrer" download className="mt-2 inline-flex items-center gap-2 text-sm text-blue-600"><FiFileText /> View/download answered file</a>}
                                                 <button
                                                     onClick={() => setSelectedAssessment({ assessmentId: assessment._id, submissionId: submission._id, student: submission.student })}
                                                     className="mt-3 rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 px-3 py-2 text-sm text-white font-semibold"
@@ -233,38 +253,67 @@ const TeacherAssessments = () => {
             <AnimatePresence>
                 {showModal && (
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 overflow-y-auto">
-                        <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }} className="w-full max-w-2xl rounded-2xl bg-white p-6 dark:bg-gray-800 my-8">
+                        <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }} className="my-6 flex max-h-[calc(100vh-3rem)] w-full max-w-md flex-col rounded-2xl bg-white p-4 shadow-2xl dark:bg-gray-800 sm:max-w-lg">
                             <div className="flex items-center justify-between mb-4">
-                                <h3 className="text-2xl font-semibold text-gray-900 dark:text-white">Create assessment</h3>
-                                <button onClick={() => setShowModal(false)} className="text-gray-500 hover:text-gray-700 dark:hover:text-white"><FiX size={24} /></button>
-                            </div>
-                            <form onSubmit={handleCreate} className="space-y-4">
-                                <input value={title} onChange={(e) => setTitle(e.target.value)} className="w-full rounded-xl border p-3 dark:border-gray-600 dark:bg-gray-700 dark:text-white" placeholder="Assessment title" required />
-                                <textarea value={description} onChange={(e) => setDescription(e.target.value)} className="w-full rounded-xl border p-3 dark:border-gray-600 dark:bg-gray-700 dark:text-white" placeholder="Short description" required />
-                                <textarea value={instructions} onChange={(e) => setInstructions(e.target.value)} rows="3" className="w-full rounded-xl border p-3 dark:border-gray-600 dark:bg-gray-700 dark:text-white" placeholder="Instructions for students" required />
-
                                 <div>
-                                    <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                                        <FiLayers size={16} className="text-blue-600" /> Field / Sector
+                                    <p className="text-[10px] font-medium uppercase tracking-[0.22em] text-blue-600 dark:text-blue-400">Assessment Studio</p>
+                                    <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Create assessment</h3>
+                                </div>
+                                <button onClick={() => setShowModal(false)} className="rounded-full p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 dark:hover:text-white dark:hover:bg-gray-700"><FiX size={18} /></button>
+                            </div>
+
+                            <form onSubmit={handleCreate} className="min-h-0 space-y-3 overflow-y-auto pr-1">
+                                <div className="space-y-6">
+                                    <div>
+                                        <label className="mb-1.5 block text-xs font-semibold text-gray-700 dark:text-gray-200">Assessment title</label>
+                                        <input value={title} onChange={(e) => setTitle(e.target.value)} className="w-full rounded-xl border border-gray-200 bg-white p-2.5 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:border-blue-500 focus:outline-none" placeholder="Assessment title" required />
+                                    </div>
+
+                                    <div>
+                                        <label className="mb-1.5 block text-xs font-semibold text-gray-700 dark:text-gray-200">Short description</label>
+                                        <textarea value={description} onChange={(e) => setDescription(e.target.value)} className="w-full rounded-xl border border-gray-200 bg-white p-2.5 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:border-blue-500 focus:outline-none" placeholder="Short description" rows="2" required />
+                                    </div>
+
+                                    <div>
+                                        <label className="mb-1.5 block text-xs font-semibold text-gray-700 dark:text-gray-200">Instructions for students</label>
+                                        <textarea value={instructions} onChange={(e) => setInstructions(e.target.value)} rows="3" className="w-full rounded-xl border border-gray-200 bg-white p-2.5 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:border-blue-500 focus:outline-none" placeholder="Instructions for students" required />
+                                    </div>
+                                </div>
+
+                                <div className="rounded-xl border border-gray-200 bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-900/40">
+                                    <label className="mb-2 flex items-center gap-2 text-xs font-semibold text-gray-700 dark:text-gray-200">
+                                        <FiLayers size={14} className="text-blue-600" /> Field / Sector
                                     </label>
-                                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => setFieldCategory('general')}
+                                        className={`mb-2 flex w-full items-center gap-2 rounded-lg border p-2 text-left text-xs transition-colors ${
+                                            fieldCategory === 'general'
+                                                ? 'border-blue-600 bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-200'
+                                                : 'border-gray-200 text-gray-700 hover:border-blue-400 dark:border-gray-600 dark:text-gray-300'
+                                        }`}
+                                    >
+                                        <span>🌍</span>
+                                        <span className="font-semibold">All students</span>
+                                    </button>
+                                    <div className="grid grid-cols-1 gap-2">
                                         {fieldGroups.map((group) => (
-                                            <div key={group.id} className="sm:col-span-1 col-span-2">
-                                                <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">{group.icon} {group.label}</p>
-                                                <div className="grid grid-cols-1 gap-2">
+                                            <div key={group.id}>
+                                                <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">{group.icon} {group.label}</p>
+                                                <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
                                                     {group.fields.map((field) => (
                                                         <button
                                                             type="button"
                                                             key={field.value}
                                                             onClick={() => setFieldCategory(field.value)}
-                                                            className={`flex items-center gap-2 p-2 rounded-lg border text-left text-sm transition-colors ${
+                                                            className={`flex items-center gap-2 rounded-lg border p-1.5 text-left text-xs transition-colors ${
                                                                 fieldCategory === field.value
-                                                                    ? 'border-blue-600 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-200'
-                                                                    : 'border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:border-blue-400'
+                                                                    ? 'border-blue-600 bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-200'
+                                                                    : 'border-gray-200 text-gray-700 hover:border-blue-400 dark:border-gray-600 dark:text-gray-300'
                                                             }`}
                                                         >
                                                             <span>{field.icon}</span>
-                                                            <span className="text-xs font-semibold">{field.label}</span>
+                                                            <span className="font-semibold">{field.label}</span>
                                                         </button>
                                                     ))}
                                                 </div>
@@ -273,39 +322,57 @@ const TeacherAssessments = () => {
                                     </div>
                                 </div>
 
-                                {/* Marking guide */}
-                                <div className="rounded-xl border border-indigo-200 dark:border-indigo-800 bg-indigo-50 dark:bg-indigo-900/20 p-4">
-                                    <div className="flex items-center justify-between mb-2">
-                                        <label className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                                            <FiFileText size={16} className="text-indigo-600" /> Marking Guide
+                                <div className="space-y-2.5">
+                                    <div className="rounded-xl border border-indigo-200 bg-indigo-50 p-3 dark:border-indigo-800 dark:bg-indigo-900/20">
+                                        <div className="mb-2 flex items-center justify-between gap-2">
+                                            <label className="flex items-center gap-2 text-xs font-semibold text-gray-900 dark:text-white">
+                                                <FiFileText size={14} className="text-indigo-600" /> Assessment PDF
+                                            </label>
+                                        </div>
+                                        <label className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-indigo-300 bg-white p-3 text-center dark:border-indigo-700 dark:bg-slate-800">
+                                            <FiFileText size={22} className="mb-2 text-indigo-600" />
+                                            <span className="text-xs font-medium text-gray-700 dark:text-gray-200">
+                                                {assessmentFile ? assessmentFile.name : 'Upload assessment PDF'}
+                                            </span>
+                                            <span className="mt-1 text-[10px] text-gray-500 dark:text-gray-400">PDF up to 20MB</span>
+                                            <input type="file" accept="application/pdf" required onChange={(e) => setAssessmentFile(e.target.files?.[0] || null)} className="hidden" />
                                         </label>
-                                        <button
-                                            type="button"
-                                            onClick={generateMarkingGuide}
-                                            className="flex items-center gap-1 text-xs text-indigo-600 dark:text-indigo-400 font-semibold hover:underline"
-                                        >
-                                            <FiTool size={14} /> Generate draft guide
-                                        </button>
+                                        {assessmentFile && <p className="mt-2 text-[10px] font-medium text-green-600 dark:text-green-400">✓ {assessmentFile.name} selected</p>}
                                     </div>
-                                    <textarea
-                                        value={guideText}
-                                        onChange={(e) => setGuideText(e.target.value)}
-                                        rows="4"
-                                        placeholder="Paste or generate your marking guide here..."
-                                        className="w-full rounded-lg border p-3 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm"
-                                    />
-                                    <label className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400 mt-3 cursor-pointer">
-                                        <FiFileText size={14} />
-                                        Or upload a marking guide PDF
-                                        <input type="file" accept="application/pdf" onChange={(e) => setGuideFile(e.target.files?.[0] || null)} className="hidden" />
-                                        {guideFile && <span className="text-green-600 font-semibold">✓ {guideFile.name}</span>}
-                                    </label>
+
+                                    <div className="rounded-xl border border-indigo-200 bg-indigo-50 p-3 dark:border-indigo-800 dark:bg-indigo-900/20">
+                                        <div className="mb-2 flex items-center justify-between">
+                                            <label className="text-xs font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                                                <FiFileText size={14} className="text-indigo-600" /> Marking guide
+                                            </label>
+                                            <button
+                                                type="button"
+                                                onClick={generateMarkingGuide}
+                                                className="flex items-center gap-1 text-[10px] font-semibold text-indigo-600 hover:underline dark:text-indigo-400"
+                                            >
+                                                <FiTool size={12} /> Generate
+                                            </button>
+                                        </div>
+                                        <textarea
+                                            value={guideText}
+                                            onChange={(e) => setGuideText(e.target.value)}
+                                            rows="3"
+                                            placeholder="Paste or generate your marking guide here..."
+                                            className="w-full rounded-lg border border-indigo-200 bg-white p-2 text-xs dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                                        />
+                                        <label className="mt-2 flex cursor-pointer items-center gap-2 text-[10px] text-gray-600 dark:text-gray-300">
+                                            <FiFileText size={12} />
+                                            Upload guide PDF
+                                            <input type="file" accept="application/pdf" onChange={(e) => setGuideFile(e.target.files?.[0] || null)} className="hidden" />
+                                            {guideFile && <span className="font-semibold text-green-600 dark:text-green-400">✓ {guideFile.name}</span>}
+                                        </label>
+                                    </div>
                                 </div>
 
-                                <div className="flex justify-end gap-3">
-                                    <button type="button" onClick={() => setShowModal(false)} className="rounded-lg bg-gray-200 px-4 py-2 dark:bg-gray-600 dark:text-white">Cancel</button>
-                                    <button type="submit" disabled={submitting} className="rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 px-4 py-2 text-white disabled:opacity-50 flex items-center gap-2">
-                                        <FiSend size={16} /> {submitting ? 'Creating...' : 'Create assessment'}
+                                <div className="flex justify-end gap-2 border-t border-gray-200 pt-3 dark:border-gray-700">
+                                    <button type="button" onClick={() => setShowModal(false)} className="rounded-lg bg-gray-200 px-3 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-300 dark:bg-gray-600 dark:text-white dark:hover:bg-gray-500">Cancel</button>
+                                    <button type="submit" disabled={submitting} className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 px-3 py-2 text-sm font-semibold text-white transition hover:from-blue-700 hover:to-indigo-700 disabled:opacity-60">
+                                        <FiSend size={14} /> {submitting ? 'Creating...' : 'Create'}
                                     </button>
                                 </div>
                             </form>

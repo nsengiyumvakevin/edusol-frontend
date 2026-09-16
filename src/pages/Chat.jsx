@@ -44,7 +44,8 @@ const Chat = () => {
             socket.current.emit('user-connected', {
                 userId: user.id || user._id,
                 role: user.role,
-                name: user.name
+                name: user.name,
+                fieldInterest: user.fieldInterest
             });
         });
         
@@ -188,27 +189,40 @@ const Chat = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [messages]);
 
-    const sendMessage = (e) => {
+    const sendMessage = async (e) => {
         e.preventDefault();
-        if (!newMessage.trim() || !selectedUser) return;
+        const trimmedMessage = newMessage.trim();
+        if (!trimmedMessage || !selectedUser) return;
 
+        const senderId = user?.id || user?._id;
         const messageData = {
-            senderId: user.id,
+            senderId,
             receiverId: selectedUser._id,
-            message: newMessage,
+            message: trimmedMessage,
             senderName: user.name,
             senderPicture: user.profilePicture
         };
 
-        console.log('Sending message:', messageData);
-        socket.current.emit('send-message', messageData);
+        try {
+            const response = await api.post('/messages', {
+                receiverId: selectedUser._id,
+                message: trimmedMessage
+            });
+
+            const savedMessage = response.data;
+            setMessages(prev => [...prev, savedMessage]);
+            socket.current?.emit('send-message', messageData);
+        } catch (error) {
+            console.error('Error sending message:', error);
+            toast.error(error.response?.data?.message || 'Failed to send message');
+        }
+
         setNewMessage('');
-        
-        // Clear typing indicator
+
         if (typingTimeoutRef.current) {
             clearTimeout(typingTimeoutRef.current);
         }
-        socket.current.emit('typing', {
+        socket.current?.emit('typing', {
             receiverId: selectedUser._id,
             isTyping: false,
             senderName: user.name

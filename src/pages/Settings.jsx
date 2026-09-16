@@ -9,20 +9,20 @@ import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
 
 const Settings = () => {
-    const { user, logout } = useAuth();
+    const { user, logout, updateProfile } = useAuth();
     const { showSnackbar } = useSnackbar();
     const { theme, toggleTheme } = useTheme();
     const { t } = useLanguage();
     const isDark = theme === 'dark';
     const navigate = useNavigate();
-    const [settings, setSettings] = useState({
-        emailNotifications: true,
-        pushNotifications: true,
-        messageNotifications: true,
-        weeklyNewsletter: false,
-        dataCollection: true,
-        twoFactorAuth: false
-    });
+    const [settings, setSettings] = useState(() => ({
+        emailNotifications: user?.settings?.emailNotifications ?? true,
+        pushNotifications: user?.settings?.pushNotifications ?? true,
+        messageNotifications: user?.settings?.messageNotifications ?? true,
+        weeklyNewsletter: user?.settings?.weeklyNewsletter ?? false,
+        dataCollection: user?.settings?.dataCollection ?? true,
+        twoFactorAuth: user?.settings?.twoFactorAuth ?? false
+    }));
     const [loading, setLoading] = useState(false);
 
     const toggleSetting = (key) => {
@@ -35,10 +35,10 @@ const Settings = () => {
     const handleSaveSettings = async () => {
         setLoading(true);
         try {
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            await updateProfile({ settings });
             showSnackbar(t('Settings saved successfully!'), 'success');
-        } catch {
-            showSnackbar(t('Failed to save settings'), 'error');
+        } catch (error) {
+            showSnackbar(error.response?.data?.message || t('Failed to save settings'), 'error');
         } finally {
             setLoading(false);
         }
@@ -241,6 +241,7 @@ const Settings = () => {
                             </label>
                             <input
                                 type="password"
+                                name="currentPassword"
                                 required
                                 className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-600"
                             />
@@ -251,6 +252,7 @@ const Settings = () => {
                             </label>
                             <input
                                 type="password"
+                                name="newPassword"
                                 required
                                 className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-600"
                             />
@@ -261,6 +263,7 @@ const Settings = () => {
                             </label>
                             <input
                                 type="password"
+                                name="confirmPassword"
                                 required
                                 className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-600"
                             />

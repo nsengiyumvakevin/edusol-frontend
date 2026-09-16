@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { api, assetUrl } from '../api';
 import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
@@ -83,7 +83,7 @@ const MySubjects = () => {
         fetchSubjects();
     }, []);
 
-    const fetchSubjects = async () => {
+    const fetchSubjects = useCallback(async () => {
         try {
             const response = await api.get('/subjects/my-subjects');
             setSubjects(response.data);
@@ -93,7 +93,7 @@ const MySubjects = () => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [t]);
 
     const handleDelete = async (id) => {
         if (window.confirm('Are you sure you want to delete this subject?')) {

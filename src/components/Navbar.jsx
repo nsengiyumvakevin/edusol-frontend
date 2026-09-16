@@ -37,7 +37,8 @@ const Navbar = () => {
             socketRef.current.emit('user-connected', {
                 userId: user.id || user._id,
                 role: user.role,
-                name: user.name
+                name: user.name,
+                fieldInterest: user.fieldInterest
             });
         });
 
